@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+/.venv/
+/venv/
+/env/
+
+# Data (too large for git, reproduce via data_fetcher.py)
+data/*.csv
+data/*.parquet
+data/*.h5
+data/*.pt
+data/*.d3
+data/chroma_db/
+
+# d3rlpy training logs
+d3rlpy_logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model artifacts
+*.pt
+*.d3
+
+# Temporary and Project Docs
+*.md
+*.png
+!assets/*.png
+*.txt
+dump.py
+patch_saas.py
+data/*.json

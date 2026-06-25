@@ -1,0 +1,306 @@
+<div class="premium-table-container">
+
+        <style scoped>
+            .premium-table-container {
+                overflow-x: auto;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.18);
+                border-radius: 0.5rem;
+                background-color: #1e222d;
+                border: 1px solid #2a2e39;
+                margin-top: 2rem;
+                margin-bottom: 2rem;
+            }
+            .dataframe { 
+                font-family: 'Inter', system-ui, sans-serif; 
+                border-collapse: collapse; 
+                width: 100%; 
+                color: #d1d4dc; 
+                font-size: 0.875rem; 
+                text-align: left;
+            }
+            .dataframe th { 
+                background-color: #131722; 
+                padding: 1rem; 
+                font-weight: 600; 
+                color: #8a93a6;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                font-size: 0.75rem;
+                border-bottom: 2px solid #2a2e39;
+            }
+            .dataframe td { 
+                padding: 1rem; 
+                border-bottom: 1px solid #2a2e39; 
+                white-space: nowrap;
+            }
+            .dataframe tr:last-child td {
+                border-bottom: none;
+            }
+            .dataframe tr:hover { 
+                background-color: #2a2e39; 
+                transition: background-color 0.15s ease-in-out;
+            }
+            /* Highlight the main strategy */
+            .dataframe tr td:nth-child(2) {
+                font-weight: 500;
+                color: #e0e3eb;
+            }
+        </style>
+        
+<table class="dataframe dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Regime</th>
+      <th>Strategy</th>
+      <th>Total Return</th>
+      <th>Sharpe</th>
+      <th>Sortino</th>
+      <th>Calmar</th>
+      <th>Max Drawdown</th>
+      <th>Ann. Vol</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Quiet Bull (2017)</td>
+      <td>Buy &amp; Hold</td>
+      <td>0.1575</td>
+      <td>3.2798</td>
+      <td>3.7697</td>
+      <td>7.3257</td>
+      <td>-0.0217</td>
+      <td>0.0545</td>
+    </tr>
+    <tr>
+      <td>Quiet Bull (2017)</td>
+      <td>Markowitz MVO (Rolling)</td>
+      <td>0.0357</td>
+      <td>0.1963</td>
+      <td>0.2185</td>
+      <td>0.0808</td>
+      <td>-0.1460</td>
+      <td>0.1068</td>
+    </tr>
+    <tr>
+      <td>Quiet Bull (2017)</td>
+      <td>Equal-Weight Baseline</td>
+      <td>0.1742</td>
+      <td>3.2095</td>
+      <td>4.3314</td>
+      <td>10.2553</td>
+      <td>-0.0172</td>
+      <td>0.0511</td>
+    </tr>
+    <tr>
+      <td>Quiet Bull (2017)</td>
+      <td>Offline CQL Only</td>
+      <td>0.1684 ± 0.0036</td>
+      <td>3.0164 ± 0.0460</td>
+      <td>4.0726 ± 0.0663</td>
+      <td>9.3262 ± 0.3405</td>
+      <td>-0.0183 ± 0.0004</td>
+      <td>0.0527 ± 0.0009</td>
+    </tr>
+    <tr>
+      <td>Quiet Bull (2017)</td>
+      <td>Offline TD3BC Only</td>
+      <td>0.1695 ± 0.0056</td>
+      <td>3.1488 ± 0.0737</td>
+      <td>4.2716 ± 0.0831</td>
+      <td>9.6875 ± 0.4306</td>
+      <td>-0.0177 ± 0.0005</td>
+      <td>0.0507 ± 0.0006</td>
+    </tr>
+    <tr>
+      <td>Quiet Bull (2017)</td>
+      <td>Dumb LLM Baseline</td>
+      <td>0.1742</td>
+      <td>3.2095</td>
+      <td>4.3314</td>
+      <td>10.2553</td>
+      <td>-0.0172</td>
+      <td>0.0511</td>
+    </tr>
+    <tr>
+      <td>Quiet Bull (2017)</td>
+      <td>Hierarchical LLM+CQL</td>
+      <td>0.1774 ± 0.0104</td>
+      <td>3.5834 ± 0.2133</td>
+      <td>5.1510 ± 0.4879</td>
+      <td>9.8583 ± 1.0809</td>
+      <td>-0.0184 ± 0.0020</td>
+      <td>0.0465 ± 0.0026</td>
+    </tr>
+    <tr>
+      <td>Quiet Bull (2017)</td>
+      <td>Hierarchical LLM+TD3BC</td>
+      <td>0.1777 ± 0.0093</td>
+      <td>3.1586 ± 0.0746</td>
+      <td>4.2987 ± 0.1568</td>
+      <td>9.4032 ± 0.6893</td>
+      <td>-0.0192 ± 0.0019</td>
+      <td>0.0529 ± 0.0036</td>
+    </tr>
+    <tr>
+      <td>COVID Crash (2020)</td>
+      <td>Buy &amp; Hold</td>
+      <td>0.1452</td>
+      <td>0.7265</td>
+      <td>0.6789</td>
+      <td>0.4625</td>
+      <td>-0.3140</td>
+      <td>0.2981</td>
+    </tr>
+    <tr>
+      <td>COVID Crash (2020)</td>
+      <td>Markowitz MVO (Rolling)</td>
+      <td>0.3173</td>
+      <td>0.9429</td>
+      <td>0.9622</td>
+      <td>0.5565</td>
+      <td>-0.1731</td>
+      <td>0.1278</td>
+    </tr>
+    <tr>
+      <td>COVID Crash (2020)</td>
+      <td>Equal-Weight Baseline</td>
+      <td>0.1673</td>
+      <td>0.6710</td>
+      <td>0.7499</td>
+      <td>0.5426</td>
+      <td>-0.3097</td>
+      <td>0.2982</td>
+    </tr>
+    <tr>
+      <td>COVID Crash (2020)</td>
+      <td>Offline CQL Only</td>
+      <td>0.1338 ± 0.0261</td>
+      <td>0.5675 ± 0.0747</td>
+      <td>0.6288 ± 0.0929</td>
+      <td>0.4211 ± 0.0912</td>
+      <td>-0.3202 ± 0.0070</td>
+      <td>0.3038 ± 0.0028</td>
+    </tr>
+    <tr>
+      <td>COVID Crash (2020)</td>
+      <td>Offline TD3BC Only</td>
+      <td>0.1606 ± 0.0100</td>
+      <td>0.6543 ± 0.0292</td>
+      <td>0.7292 ± 0.0343</td>
+      <td>0.5269 ± 0.0361</td>
+      <td>-0.3063 ± 0.0034</td>
+      <td>0.2958 ± 0.0031</td>
+    </tr>
+    <tr>
+      <td>COVID Crash (2020)</td>
+      <td>Dumb LLM Baseline</td>
+      <td>0.1913</td>
+      <td>1.0142</td>
+      <td>1.1326</td>
+      <td>0.8524</td>
+      <td>-0.2254</td>
+      <td>0.1915</td>
+    </tr>
+    <tr>
+      <td>COVID Crash (2020)</td>
+      <td>Hierarchical LLM+CQL</td>
+      <td>0.1842 ± 0.0197</td>
+      <td>0.7785 ± 0.0674</td>
+      <td>0.8566 ± 0.0668</td>
+      <td>0.6968 ± 0.0915</td>
+      <td>-0.2668 ± 0.0185</td>
+      <td>0.2630 ± 0.0127</td>
+    </tr>
+    <tr>
+      <td>COVID Crash (2020)</td>
+      <td>Hierarchical LLM+TD3BC</td>
+      <td>0.1681 ± 0.0094</td>
+      <td>0.6737 ± 0.0354</td>
+      <td>0.7561 ± 0.0407</td>
+      <td>0.5473 ± 0.0481</td>
+      <td>-0.3095 ± 0.0161</td>
+      <td>0.2987 ± 0.0138</td>
+    </tr>
+    <tr>
+      <td>Rate Hike Choppy (2022)</td>
+      <td>Buy &amp; Hold</td>
+      <td>-0.1477</td>
+      <td>-0.8385</td>
+      <td>-1.0982</td>
+      <td>-0.7113</td>
+      <td>-0.2092</td>
+      <td>0.2017</td>
+    </tr>
+    <tr>
+      <td>Rate Hike Choppy (2022)</td>
+      <td>Markowitz MVO (Rolling)</td>
+      <td>0.1516</td>
+      <td>0.3904</td>
+      <td>0.3965</td>
+      <td>0.1536</td>
+      <td>-0.3140</td>
+      <td>0.2203</td>
+    </tr>
+    <tr>
+      <td>Rate Hike Choppy (2022)</td>
+      <td>Equal-Weight Baseline</td>
+      <td>-0.1409</td>
+      <td>-0.6609</td>
+      <td>-1.0456</td>
+      <td>-0.7184</td>
+      <td>-0.1983</td>
+      <td>0.2018</td>
+    </tr>
+    <tr>
+      <td>Rate Hike Choppy (2022)</td>
+      <td>Offline CQL Only</td>
+      <td>-0.1481 ± 0.0057</td>
+      <td>-0.6841 ± 0.0283</td>
+      <td>-1.0774 ± 0.0418</td>
+      <td>-0.7312 ± 0.0131</td>
+      <td>-0.2047 ± 0.0043</td>
+      <td>0.2061 ± 0.0024</td>
+    </tr>
+    <tr>
+      <td>Rate Hike Choppy (2022)</td>
+      <td>Offline TD3BC Only</td>
+      <td>-0.1477 ± 0.0030</td>
+      <td>-0.7019 ± 0.0169</td>
+      <td>-1.1126 ± 0.0262</td>
+      <td>-0.7372 ± 0.0076</td>
+      <td>-0.2026 ± 0.0023</td>
+      <td>0.2016 ± 0.0017</td>
+    </tr>
+    <tr>
+      <td>Rate Hike Choppy (2022)</td>
+      <td>Dumb LLM Baseline</td>
+      <td>-0.1409</td>
+      <td>-0.6609</td>
+      <td>-1.0456</td>
+      <td>-0.7184</td>
+      <td>-0.1983</td>
+      <td>0.2018</td>
+    </tr>
+    <tr>
+      <td>Rate Hike Choppy (2022)</td>
+      <td>Hierarchical LLM+CQL</td>
+      <td>-0.1337 ± 0.0303</td>
+      <td>-0.7199 ± 0.1693</td>
+      <td>-1.1592 ± 0.3025</td>
+      <td>-0.6802 ± 0.0829</td>
+      <td>-0.1968 ± 0.0208</td>
+      <td>0.1792 ± 0.0109</td>
+    </tr>
+    <tr>
+      <td>Rate Hike Choppy (2022)</td>
+      <td>Hierarchical LLM+TD3BC</td>
+      <td>-0.1399 ± 0.0127</td>
+      <td>-0.6389 ± 0.0608</td>
+      <td>-1.0127 ± 0.0983</td>
+      <td>-0.7128 ± 0.0379</td>
+      <td>-0.1981 ± 0.0090</td>
+      <td>0.2057 ± 0.0111</td>
+    </tr>
+  </tbody>
+</table>
+</div>

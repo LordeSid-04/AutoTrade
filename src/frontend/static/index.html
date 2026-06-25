@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AutoTrade Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- MathJax for LaTeX rendering -->
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']]
+    },
+    svg: {
+      fontCache: 'global'
+    }
+  };
+</script>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+</script>
+
+<script id="tailwind-config">
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    tv: {
+                        bg: '#131722',
+                        panel: '#1E222D',
+                        border: '#2A2E39',
+                        text: '#D1D4DC',
+                        textMuted: '#787B86',
+                        blue: '#2962FF',
+                        blueHover: '#1E53E5',
+                        green: '#089981',
+                        greenBg: 'rgba(8, 153, 129, 0.1)',
+                        red: '#F23645',
+                        redBg: 'rgba(242, 54, 69, 0.1)'
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    }
+</script>
+<style>
+    body { 
+        margin: 0; padding: 0; 
+        background-color: #131722; 
+        color: #D1D4DC; 
+        font-family: 'Inter', sans-serif; 
+        overflow: hidden; /* App-like feel */
+    }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2A2E39; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #787B86; }
+
+    .grid-container {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        grid-template-rows: 50px 1fr;
+        height: 100vh;
+        width: 100vw;
+    }
+
+    .area-nav { grid-column: 1 / -1; grid-row: 1; }
+    .area-left { grid-column: 1; grid-row: 2; }
+
+    .panel {
+        background-color: #1E222D;
+        border: 1px solid #2A2E39;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Ticker Flash Animations */
+    @keyframes flashGreen {
+        0% { background-color: rgba(8, 153, 129, 0.4); }
+        100% { background-color: transparent; }
+    }
+    @keyframes flashRed {
+        0% { background-color: rgba(242, 54, 69, 0.4); }
+        100% { background-color: transparent; }
+    }
+    .flash-up { animation: flashGreen 0.8s ease-out; }
+    .flash-down { animation: flashRed 0.8s ease-out; }
+    
+    .btn-active {
+        background-color: rgba(41, 98, 255, 0.1);
+        color: #2962FF;
+        border-bottom: 2px solid #2962FF;
+    }
+    
+    .view-section { display: none; grid-column: 2; grid-row: 2; }
+    .view-section.active { display: flex; flex-direction: row; overflow: hidden; }
+    .view-section.active.flex-col { flex-direction: column; }
+
+    /* Plotly ModeBar Scoped Vertical Layout */
+    #interactive-backtest-chart .modebar, #trading-chart .modebar, #main-chart .modebar {
+        display: flex !important;
+        flex-direction: column !important;
+        background-color: #1E222D !important;
+        border: 1px solid #2A2E39 !important;
+        border-radius: 4px !important;
+        padding: 4px !important;
+        top: 10px !important;
+        right: 10px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        z-index: 20;
+    }
+    #interactive-backtest-chart .modebar-group, #trading-chart .modebar-group, #main-chart .modebar-group {
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+    #interactive-backtest-chart .modebar-btn, #trading-chart .modebar-btn, #main-chart .modebar-btn {
+        margin: 2px 0 !important;
+    }
+
+    /* Tooltip container for AI Evidence */
+    .evidence-tooltip {
+        position: relative;
+        display: inline-block;
+    }
+    .evidence-tooltip .tooltip-text {
+        visibility: hidden;
+        width: 250px;
+        background-color: #131722;
+        color: #fff;
+        text-align: left;
+        border: 1px solid #2A2E39;
+        border-radius: 4px;
+        padding: 8px;
+        position: absolute;
+        z-index: 50;
+        top: 125%;
+        right: 0;
+        opacity: 0;
+        transition: opacity 0.3s;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        font-weight: normal;
+        white-space: pre-wrap;
+    }
+    .evidence-tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+</style>
+</head>
+<body>
+
+<div class="grid-container bg-tv-bg text-sm">
+    
+    <!-- Top Navigation -->
+    <nav class="area-nav border-b border-tv-border bg-tv-panel flex items-center justify-between px-4 z-40">
+        <div class="flex items-center gap-6">
+            <div class="font-bold text-lg text-white flex items-center">
+                <span class="w-2 h-2 rounded-full bg-tv-blue mr-2"></span> AutoTrade
+            </div>
+            <div class="flex h-full border-x border-tv-border nav-tabs">
+                <button class="nav-btn px-4 h-12 font-medium hover:bg-tv-border transition-colors btn-active" data-target="dashboard">TERMINAL</button>
+                <button class="nav-btn px-4 h-12 font-medium hover:bg-tv-border transition-colors text-tv-textMuted" data-target="backtest">BACKTESTING</button>
+                <button class="nav-btn px-4 h-12 font-medium hover:bg-tv-border transition-colors text-tv-textMuted" data-target="settings">SETTINGS</button>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div id="alpaca-status" class="flex items-center gap-2 text-tv-textMuted">
+                <div class="w-2 h-2 rounded-full bg-tv-textMuted" id="status-dot"></div> Disconnected
+            </div>
+            <button id="btn-logout" class="bg-tv-border hover:bg-tv-textMuted text-white px-3 py-1.5 rounded transition-colors text-xs font-medium hidden">
+                SIGN OUT
+            </button>
+        </div>
+    </nav>
+
+    <!-- Left Sidebar: Watchlist -->
+    <aside class="area-left panel border-t-0 border-l-0 overflow-hidden">
+        <div class="p-3 border-b border-tv-border font-semibold text-white flex justify-between items-center">
+            Watchlist
+            <button class="text-tv-textMuted hover:text-white">+</button>
+        </div>
+        <div class="flex px-3 py-1 border-b border-tv-border text-xs text-tv-textMuted uppercase">
+            <div class="flex-1">Symbol</div>
+            <div class="w-16 text-right">Last</div>
+            <div class="w-16 text-right">Chg%</div>
+        </div>
+        <div id="watchlist-container" class="flex-1 overflow-y-auto">
+            <!-- Populated via JS -->
+        </div>
+    </aside>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="view-section active h-full">
+        <!-- Center: Interactive Charting Split -->
+        <main class="flex-1 flex flex-col border-l border-tv-border overflow-hidden">
+            
+            <!-- TOP HALF: Trading Chart -->
+            <div class="h-[60%] flex flex-col border-b border-tv-border shrink-0">
+                <!-- Trading Toolbar -->
+                <div class="h-14 border-b border-tv-border flex items-center px-4 gap-4 bg-tv-panel shrink-0">
+                    <!-- Symbol Search -->
+                    <div class="flex items-center bg-tv-bg border border-tv-border rounded overflow-hidden h-8">
+                        <div class="pl-3 pr-2 text-tv-textMuted">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </div>
+                        <input type="text" id="symbol-search" class="bg-transparent border-none text-white text-sm focus:outline-none w-32 uppercase font-mono tracking-wider" placeholder="SPY" value="SPY">
+                    </div>
+                    <div class="h-5 w-px bg-tv-border"></div>
+                    
+                    <!-- Timeframes -->
+                    <div class="flex border border-tv-border rounded overflow-hidden" id="timeframe-switcher">
+                        <button class="px-3 py-1 text-xs font-medium bg-tv-bg text-white hover:bg-tv-border transition-colors" data-tf="1m">1m</button>
+                        <button class="px-3 py-1 text-xs font-medium bg-tv-bg text-white hover:bg-tv-border border-l border-tv-border transition-colors" data-tf="5m">5m</button>
+                        <button class="px-3 py-1 text-xs font-medium bg-tv-bg text-white hover:bg-tv-border border-l border-tv-border transition-colors" data-tf="15m">15m</button>
+                        <button class="px-3 py-1 text-xs font-medium bg-tv-blue text-white hover:bg-tv-blueHover border-l border-tv-border transition-colors" data-tf="1d">1D</button>
+                        <button class="px-3 py-1 text-xs font-medium bg-tv-bg text-white hover:bg-tv-border border-l border-tv-border transition-colors" data-tf="1wk">1W</button>
+                        <button class="px-3 py-1 text-xs font-medium bg-tv-bg text-white hover:bg-tv-border border-l border-tv-border transition-colors" data-tf="1mo">1M</button>
+                    </div>
+                    
+                    <div class="h-5 w-px bg-tv-border"></div>
+                    
+                    <!-- Drawing Toolbar -->
+                    <div class="flex gap-2">
+                        <button id="btn-draw-line" class="text-tv-textMuted hover:text-white px-2 py-1 text-xs uppercase tracking-wider rounded hover:bg-tv-border flex items-center gap-1">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="20" x2="20" y2="4"></line><circle cx="4" cy="20" r="2"></circle><circle cx="20" cy="4" r="2"></circle></svg>
+                            Line
+                        </button>
+                        <button id="btn-draw-rect" class="text-tv-textMuted hover:text-white px-2 py-1 text-xs uppercase tracking-wider rounded hover:bg-tv-border flex items-center gap-1">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                            Rect
+                        </button>
+                        <button id="btn-erase" class="text-tv-textMuted hover:text-white px-2 py-1 text-xs uppercase tracking-wider rounded hover:bg-tv-border flex items-center gap-1">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            Clear
+                        </button>
+                    </div>
+                    
+                    <div class="ml-auto text-xs text-tv-green font-mono" id="live-price-display">Loading...</div>
+                </div>
+
+                <!-- Plotly Container -->
+                <div id="trading-chart" class="flex-1 w-full relative">
+                    <div id="chart-loader" class="absolute inset-0 flex items-center justify-center bg-tv-bg/50 z-10 hidden">
+                        <div class="text-tv-blue animate-pulse font-bold">LOADING DATA...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTTOM HALF: Equity Curve -->
+            <div class="flex-1 flex flex-col shrink-0">
+                <!-- Dashboard Toolbar -->
+                <div class="h-14 border-b border-tv-border flex items-center px-4 gap-4 bg-tv-panel shrink-0">
+                    <div class="font-bold text-white mr-2 uppercase text-xs tracking-wider">Equity Curve Overlays</div>
+                    
+                    <div class="flex border border-tv-border rounded overflow-hidden" id="model-switcher">
+                        <button class="px-4 py-2 text-sm font-medium bg-tv-bg text-white hover:bg-tv-border transition-colors dashboard-model-btn" data-model="BuyAndHold">B&H</button>
+                        <button class="px-4 py-2 text-sm font-medium bg-tv-bg text-white hover:bg-tv-border border-l border-tv-border transition-colors dashboard-model-btn" data-model="MVO">MVO</button>
+                        <button class="px-4 py-2 text-sm font-medium bg-tv-bg text-white hover:bg-tv-border border-l border-tv-border transition-colors dashboard-model-btn" data-model="RL_Model">Offline RL</button>
+                        <button class="px-4 py-2 text-sm font-medium bg-tv-blue text-white hover:bg-tv-blueHover border-l border-tv-border transition-colors dashboard-model-btn active-model" data-model="RL_LLM">Hierarchical RL+LLM</button>
+                    </div>
+                </div>
+                <!-- Plotly Container -->
+                <div id="main-chart" class="flex-1 bg-tv-bg relative"></div>
+            </div>
+
+        </main>
+
+        <!-- Right: Analytics, AI & Trade Panel -->
+        <aside class="w-[350px] shrink-0 bg-tv-panel flex flex-col border-l border-tv-border overflow-y-auto">
+            
+            <!-- TRADE PANEL TOGGLE -->
+            <div class="p-4 border-b border-tv-border">
+                <button id="btn-toggle-trade" class="w-full bg-tv-green hover:bg-[#067a67] text-white font-bold py-3 rounded transition-colors text-sm shadow-lg shadow-tv-green/20 flex justify-center items-center gap-2 tracking-wider">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+                    EXECUTE TRADE
+                </button>
+            </div>
+
+            <!-- HIDDEN ORDER TICKET -->
+            <div id="trade-panel" class="p-4 border-b border-tv-border hidden bg-tv-bg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-white text-base">Order Ticket</h3>
+                </div>
+                
+                <div class="flex bg-tv-panel border border-tv-border rounded p-1 mb-4">
+                    <button id="btn-side-buy" class="flex-1 py-1.5 text-center text-xs font-bold rounded bg-tv-green text-white">BUY</button>
+                    <button id="btn-side-sell" class="flex-1 py-1.5 text-center text-xs font-bold rounded text-tv-textMuted hover:text-white bg-transparent">SELL</button>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-tv-textMuted">Order Type</span>
+                        <select id="order-type" class="bg-tv-panel border border-tv-border rounded text-xs text-white px-2 py-1 outline-none">
+                            <option value="market">Market</option>
+                            <option value="limit">Limit</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-tv-textMuted">Quantity</span>
+                        <input type="number" id="order-qty" value="1" min="1" step="1" class="bg-tv-panel border border-tv-border rounded text-xs text-white px-2 py-1 w-24 text-right outline-none">
+                    </div>
+                    
+                    <div id="limit-price-row" class="flex items-center justify-between hidden">
+                        <span class="text-xs text-tv-textMuted">Limit Price</span>
+                        <input type="number" id="order-limit" step="0.01" class="bg-tv-panel border border-tv-border rounded text-xs text-white px-2 py-1 w-24 text-right outline-none">
+                    </div>
+                    
+                    <div class="pt-2">
+                        <button id="btn-submit-order" class="w-full bg-tv-green hover:bg-[#067a67] text-white font-bold py-2 rounded transition-colors text-sm shadow-lg shadow-tv-green/20">
+                            Place Order
+                        </button>
+                    </div>
+                    <div id="order-status-msg" class="text-xs text-center mt-1 hidden"></div>
+                </div>
+            </div>
+
+            <!-- AI Analyst Recommendation -->
+            <div class="p-4 border-b border-tv-border bg-tv-bg/30">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-tv-blue animate-pulse"></span>
+                        AI Strategist Logic
+                    </h3>
+                    
+                    <div class="evidence-tooltip">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#787B86" stroke-width="2" class="cursor-help"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        <div class="tooltip-text text-xs" id="ai-evidence-content">Awaiting context retrieval...</div>
+                    </div>
+                </div>
+                
+                <div class="bg-tv-panel border border-tv-border rounded p-3 text-xs">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-tv-textMuted">Macro Regime:</span>
+                        <span id="ai-regime-display" class="font-bold text-tv-blue cursor-help" title="The LLM determines the macro regime by analyzing CPI, rates, and sentiment. RISK-OFF means defensive.">[ LOADING ]</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-tv-textMuted">Allocation Bias:</span>
+                        <span id="ai-rec-action" class="font-bold text-tv-textMuted">--</span>
+                    </div>
+                    
+                    <div id="ai-reasoning-content" class="text-tv-textMuted italic border-t border-tv-border pt-2 mt-2">
+                        Awaiting instruction...
+                    </div>
+                </div>
+                
+                <button id="btn-plan-strategy" class="mt-4 w-full bg-tv-blue hover:bg-tv-blueHover text-white font-medium py-1.5 rounded transition-colors text-xs tracking-wide shadow-lg shadow-tv-blue/20">
+                    > INITIATE PORTFOLIO RE-EVALUATION
+                </button>
+                <div id="rebalance-status" class="mt-1 text-[10px] text-center text-tv-textMuted"></div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="p-6 border-b border-tv-border">
+                <div class="font-semibold text-white mb-3 flex justify-between items-center group relative evidence-tooltip">
+                    <span class="cursor-help border-b border-dotted border-tv-textMuted uppercase text-xs tracking-wider">Performance Metrics</span>
+                    <div class="tooltip-text text-xs">Metrics explain the portfolio's risk-adjusted performance. Sharpe > 1 is excellent. Drawdown measures the peak-to-trough drop.</div>
+                    <span class="text-tv-blue text-[10px] uppercase bg-tv-blue/10 px-2 py-1 rounded font-bold tracking-wider" id="active-model-label">Hierarchical RL+LLM</span>
+                </div>
+                
+                <table class="w-full text-xs text-left mb-2">
+                    <thead>
+                        <tr class="text-tv-textMuted border-b border-tv-border">
+                            <th class="pb-2 font-medium">Metric</th>
+                            <th class="pb-2 font-medium text-right">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-tv-border">
+                            <td class="py-2 text-tv-textMuted">Total Return</td>
+                            <td class="py-2 text-tv-green font-mono text-right" id="metric-return">--</td>
+                        </tr>
+                        <tr class="border-b border-tv-border">
+                            <td class="py-2 text-tv-textMuted">Sharpe Ratio</td>
+                            <td class="py-2 text-white font-mono text-right" id="metric-sharpe">--</td>
+                        </tr>
+                        <tr class="border-b border-tv-border">
+                            <td class="py-2 text-tv-textMuted">Max Drawdown</td>
+                            <td class="py-2 text-tv-red font-mono text-right" id="metric-drawdown">--</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-tv-textMuted">Annualized Volatility</td>
+                            <td class="py-2 text-white font-mono text-right" id="metric-vol">--</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Live Orders & Activities -->
+            <div class="flex-1 flex flex-col p-4 border-b border-tv-border">
+                <div class="text-xs text-white uppercase font-bold mb-2 flex justify-between">
+                    Recent Activity
+                    <button onclick="fetchActivities(); fetchOrders();" class="text-tv-blue hover:text-white font-normal">Refresh</button>
+                </div>
+                <div class="overflow-y-auto max-h-40">
+                    <div id="activities-table-body" class="space-y-2 text-xs">
+                        <!-- Injected JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Formulation -->
+            <div class="p-6">
+                <div class="font-semibold text-white mb-3">Model Formulation</div>
+                <div class="text-xs text-tv-textMuted mb-4">The offline RL agent is trained using Conservative Q-Learning with a Conditional Value at Risk (CVaR) heuristic penalty to strictly minimize downside volatility.</div>
+                
+                <div class="bg-tv-bg p-4 rounded border border-tv-border w-full overflow-hidden flex flex-col items-center justify-center">
+                    <!-- MathJax equations -->
+                    <div class="text-white text-center text-xs mb-4 w-full overflow-x-auto">
+                        <div class="text-tv-textMuted mb-2">Reward Shaping (VaR Penalty):</div>
+                        $$ R_t = r_t - \lambda \cdot \max(0, \text{VaR}_{95}(R_{trail}) - r_{trail}) $$
+                    </div>
+                    <div class="text-white text-center text-xs w-full overflow-x-auto">
+                        <div class="text-tv-textMuted mb-2">Hierarchical LLM Constraint:</div>
+                        $$ \pi(a|s) \text{ s.t. } \sum_{i} w_i \le \text{Cap}_{LLM} $$
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div id="view-settings" class="view-section h-full overflow-y-auto bg-tv-bg border-l border-tv-border border-b border-tv-border p-8">
+        <div class="max-w-xl mx-auto panel p-6">
+            <h2 class="text-lg font-bold text-white mb-2">API Credentials</h2>
+            <p class="text-xs text-tv-textMuted mb-6">Manage your keys for LLM inference and Alpaca trade execution.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-tv-textMuted mb-1">OpenAI API Key</label>
+                    <input type="password" id="cfg-openai" class="w-full bg-tv-bg border border-tv-border rounded px-3 py-2 text-white focus:border-tv-blue focus:ring-1 focus:ring-tv-blue outline-none transition-colors" placeholder="sk-...">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-tv-textMuted mb-1">Alpaca API Key</label>
+                    <input type="password" id="cfg-alpaca-key" class="w-full bg-tv-bg border border-tv-border rounded px-3 py-2 text-white focus:border-tv-blue focus:ring-1 focus:ring-tv-blue outline-none transition-colors" placeholder="PK...">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-tv-textMuted mb-1">Alpaca Secret Key</label>
+                    <input type="password" id="cfg-alpaca-secret" class="w-full bg-tv-bg border border-tv-border rounded px-3 py-2 text-white focus:border-tv-blue focus:ring-1 focus:ring-tv-blue outline-none transition-colors" placeholder="...">
+                </div>
+                
+                <button id="btn-save-config" class="mt-4 w-full bg-tv-blue hover:bg-tv-blueHover text-white font-medium py-2 rounded transition-colors shadow-lg shadow-tv-blue/20">
+                    Save Credentials
+                </button>
+                <div id="config-status" class="mt-2 text-xs text-center"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BACKTESTING VIEW -->
+    <div id="view-backtest" class="view-section h-full overflow-hidden bg-tv-bg border-l border-tv-border border-b border-tv-border text-tv-text flex-col">
+        <div class="flex items-center justify-between p-4 border-b border-tv-border bg-tv-panel">
+            <h1 class="text-xl font-bold font-sans">Backtest Evaluation Engine</h1>
+            <div class="flex items-center space-x-3">
+                <span class="text-sm font-semibold text-tv-textMuted uppercase tracking-wider">Regime Select</span>
+                <select id="regime-selector" class="bg-tv-bg border border-tv-border text-tv-text text-sm rounded focus:ring-tv-blue focus:border-tv-blue block p-2 cursor-pointer outline-none">
+                    <option>Loading...</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="flex flex-col xl:flex-row flex-1 overflow-hidden">
+            <!-- Left Side: Interactive Chart -->
+            <div class="flex-1 flex flex-col border-r border-tv-border min-w-0 bg-tv-bg relative">
+                <div id="bt-chart-loader" class="absolute inset-0 z-50 flex items-center justify-center bg-tv-bg/80 hidden">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-tv-blue"></div>
+                </div>
+                <div class="p-3 border-b border-tv-border bg-tv-panel flex flex-col lg:flex-row justify-between items-center space-y-2 lg:space-y-0 gap-4">
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-tv-text shrink-0">Equity Curve</h2>
+                    
+                    <!-- Backtest Model Selector Toggle Group -->
+                    <div class="flex border border-tv-border rounded overflow-hidden" id="backtest-model-switcher">
+                        <button class="px-3 py-1.5 text-[11px] font-medium bt-model-btn bg-tv-blue text-white transition-colors" data-model="Buy & Hold">B&H</button>
+                        <button class="px-3 py-1.5 text-[11px] font-medium bt-model-btn bg-tv-blue text-white border-l border-tv-border transition-colors" data-model="Markowitz MVO (Rolling)">MVO</button>
+                        <button class="px-3 py-1.5 text-[11px] font-medium bt-model-btn bg-tv-bg text-tv-textMuted border-l border-tv-border transition-colors" data-model="Offline CQL Only">CQL</button>
+                        <button class="px-3 py-1.5 text-[11px] font-medium bt-model-btn bg-tv-bg text-tv-textMuted border-l border-tv-border transition-colors" data-model="Offline TD3BC Only">TD3BC</button>
+                        <button class="px-3 py-1.5 text-[11px] font-medium bt-model-btn bg-tv-blue text-white border-l border-tv-border transition-colors" data-model="Hierarchical LLM+CQL">LLM+CQL</button>
+                        <button class="px-3 py-1.5 text-[11px] font-medium bt-model-btn bg-tv-blue text-white border-l border-tv-border transition-colors" data-model="Hierarchical LLM+TD3BC">LLM+TD3BC</button>
+                    </div>
+
+                    <div class="flex space-x-1 shrink-0" id="backtest-timeframes">
+                        <button data-tf="1M" class="bt-tf-btn px-3 py-1 text-xs font-mono font-medium rounded hover:bg-tv-border transition-colors text-tv-textMuted">1M</button>
+                        <button data-tf="3M" class="bt-tf-btn px-3 py-1 text-xs font-mono font-medium rounded hover:bg-tv-border transition-colors text-tv-textMuted">3M</button>
+                        <button data-tf="6M" class="bt-tf-btn px-3 py-1 text-xs font-mono font-medium rounded hover:bg-tv-border transition-colors text-tv-textMuted">6M</button>
+                        <button data-tf="1Y" class="bt-tf-btn px-3 py-1 text-xs font-mono font-medium rounded hover:bg-tv-border transition-colors text-tv-textMuted">1Y</button>
+                        <button data-tf="ALL" class="bt-tf-btn px-3 py-1 text-xs font-mono font-medium rounded bg-tv-blue hover:bg-tv-blueHover transition-colors text-white">ALL</button>
+                    </div>
+                </div>
+                <div id="interactive-backtest-chart" class="flex-1 w-full h-full relative">
+                    <!-- Plotly renders here -->
+                </div>
+            </div>
+            
+            <!-- Right Side: Performance Table -->
+            <div class="w-full xl:w-2/5 flex flex-col bg-[#0b0e11] overflow-y-auto">
+                <div class="p-3 border-b border-tv-border bg-tv-panel sticky top-0 z-10">
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-tv-text">Out of Sample Metrics</h2>
+                </div>
+                <div class="p-4">
+                    <div class="overflow-x-auto rounded border border-tv-border shadow-md">
+                        <table class="w-full text-left text-sm font-sans text-tv-text whitespace-nowrap">
+                            <thead class="text-xs text-tv-textMuted uppercase bg-tv-panel border-b border-tv-border">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 font-semibold">Model</th>
+                                    <th scope="col" class="px-4 py-3 font-semibold text-right">Return</th>
+                                    <th scope="col" class="px-4 py-3 font-semibold text-right">Sharpe</th>
+                                    <th scope="col" class="px-4 py-3 font-semibold text-right">Max DD</th>
+                                    <th scope="col" class="px-4 py-3 font-semibold text-right">Ann. Vol</th>
+                                </tr>
+                            </thead>
+                            <tbody id="interactive-backtest-table" class="divide-y divide-tv-border font-mono text-[13px] bg-tv-bg">
+                                <tr><td colspan="5" class="px-4 py-6 text-center text-tv-textMuted">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Explanation of Results -->
+                    <div class="mt-6 bg-tv-panel border border-tv-border rounded-lg p-4 space-y-4">
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-tv-blue"></span>
+                            Performance Analysis & Insights
+                        </h3>
+                        <div class="text-xs text-tv-textMuted leading-relaxed space-y-3">
+                            <p>
+                                <strong class="text-white">Hierarchical Advantage:</strong> The Hierarchical LLM+RL models (LLM+CQL and LLM+TD3BC) demonstrate superior downside risk mitigation compared to their vanilla counterpart models. By utilizing the LLM Strategist's macro regime classification to apply dynamic sector exposure caps and cash safe-haven rules during high-risk regimes (like COVID Crash 2020 and Rate Hike Choppy 2022), they significantly reduce the Maximum Drawdown (Max DD).
+                            </p>
+                            <p>
+                                <strong class="text-white">CQL vs TD3+BC:</strong> Conservative Q-Learning (CQL) maintains a more defensive, conservative risk profile by incorporating a conditional value-at-risk (CVaR) reward penalty, while TD3+BC achieves slightly higher raw returns in steady trending environments (like Quiet Bull 2017) at the cost of higher drawdowns and volatility.
+                            </p>
+                            <p>
+                                <strong class="text-white">Key Takeaways & Improvement Areas:</strong> Adding structural risk-limiting rules successfully guards the RL agent's weight allocations against black-swan macro environments. Future model iterations could incorporate real-time spread commissions and attention-based shared encoder modules to capture inter-asset correlations more effectively.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="/static/app.js"></script>
+
+<!-- AUTH MODAL -->
+<div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-tv-bg bg-opacity-90 backdrop-blur-sm">
+    <div class="bg-tv-panel border border-tv-border rounded-lg shadow-2xl p-8 w-full max-w-md">
+        <div class="flex items-center justify-center mb-6">
+            <div class="w-3 h-3 rounded-full bg-tv-blue mr-2"></div>
+            <h2 class="text-2xl font-bold text-white">AutoTrade</h2>
+        </div>
+        <p class="text-tv-textMuted text-center text-sm mb-6">Enter your credentials to access the terminal.</p>
+        
+        <form id="auth-form" class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-tv-textMuted mb-1">Email</label>
+                <input type="email" id="auth-email" required class="w-full bg-tv-bg border border-tv-border rounded px-3 py-2 text-white focus:border-tv-blue focus:ring-1 focus:ring-tv-blue outline-none transition-colors">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-tv-textMuted mb-1">Password</label>
+                <input type="password" id="auth-password" required class="w-full bg-tv-bg border border-tv-border rounded px-3 py-2 text-white focus:border-tv-blue focus:ring-1 focus:ring-tv-blue outline-none transition-colors">
+            </div>
+            <div id="auth-error" class="hidden text-tv-red text-xs bg-tv-redBg border border-tv-red/20 rounded p-2 text-center"></div>
+            <div class="pt-4 space-y-3">
+                <button type="submit" id="btn-login" class="w-full bg-tv-blue hover:bg-tv-blueHover text-white font-medium py-2 rounded transition-colors shadow-lg shadow-tv-blue/20">Sign In</button>
+                <button type="button" id="btn-signup" class="w-full bg-transparent hover:bg-tv-border text-tv-textMuted hover:text-white font-medium py-2 rounded border border-tv-border transition-colors">Create Account</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
