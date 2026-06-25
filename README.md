@@ -8,19 +8,19 @@ A state-of-the-art hierarchical trading system that dynamically manages a portfo
 
 ---
 
-## 📖 The Methodology
+## The Methodology
 
-Traditional quantitative projects often fall into classic traps: treating market data as online RL, ignoring transaction costs, optimizing for raw returns instead of risk, and utilizing cherry-picked backtesting windows. 
+Traditional models often fall into the trap of treating market data as online RL, ignoring transaction costs, optimizing for raw returns instead of risk, and utilizing cherry-picked backtesting windows. 
 
 This project aims for institutional rigor by actively preventing data leakage and optimizing for the **Conditional Value at Risk (CVaR)**.
 
-### 🧠 Workstream 1: LLM Macro Strategist (RAG)
+### Workstream 1: LLM Macro Strategist (RAG)
 We utilize **Retrieval-Augmented Generation (RAG)** via LangChain and ChromaDB. The LLM acts as the Chief Macro Strategist:
 1. **Ingests:** FOMC statements, CPI prints, and geopolitical news.
 2. **Reasons:** Classifies the current market into `risk-on`, `risk-off`, or `transitional`.
 3. **Constrains:** Outputs a strictly typed Pydantic JSON schema dictating the *Maximum Volatility Target* and *Sector Exposure Caps* for the downstream execution engine.
 
-### 🤖 Workstream 2: Risk-Sensitive Offline RL Executor 
+### Workstream 2: Risk-Sensitive Offline RL Executor 
 The execution engine is built on `d3rlpy` and a custom Gymnasium multi-asset environment. 
 - **Offline CQL & TD3+BC:** Trains strictly on historical transitions, avoiding the forward-looking bias of online RL.
 - **CVaR Downside Penalty (Heuristic Reward Shaping):** Instead of a formal distributional RL framework, the step reward is penalized using a heuristic shaping term computed from trailing realized returns. If the portfolio breaches the 95% Value-at-Risk ($\text{VaR}_{95}$) of its own recent history, a strict Lambda multiplier heavily penalizes the Q-function.
@@ -28,7 +28,7 @@ The execution engine is built on `d3rlpy` and a custom Gymnasium multi-asset env
 
 ---
 
-## 📊 Asset Universe
+## Asset Universe
 14 years of daily price/volume data (2010–2024) across 15 highly liquid ETFs to ensure realistic capacity and trading volume:
 * **Indices:** `SPY` (S&P 500), `QQQ` (Nasdaq 100), `IWM` (Russell 2000)
 * **Sectors:** `XLF`, `XLK`, `XLV`, `XLE`, `XLI`, `XLY`, `XLP`, `XLU`, `XLB`, `XLC`
@@ -36,7 +36,7 @@ The execution engine is built on `d3rlpy` and a custom Gymnasium multi-asset env
 
 ---
 
-## 📈 Final Walk-Forward Backtest Results
+## Final Walk-Forward Backtest Results
 
 To rigorously validate the architecture, we utilize a rolling walk-forward backtest evaluated over true out-of-sample macro regimes, simulating a real-world trading lifecycle. Results are evaluated against Equal-Weight, Buy & Hold, and Rolling Markowitz MVO benchmarks.
 
@@ -87,7 +87,7 @@ To rigorously validate the architecture, we utilize a rolling walk-forward backt
 
 ---
 
-## ⚙️ Installation & Usage
+## Installation & Usage
 
 1. **Clone and Install Dependencies**
 ```bash
